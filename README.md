@@ -3,7 +3,7 @@
 A basic, foundational AI-powered text summarization web app built with **React + Vite** (frontend) and **Express + Groq** (backend).
 
 ## Features
-- ⚡ **Basic Summarization** — Send text to Gemini and receive a clear, concise summary instantly.
+- ⚡ **Basic Summarization** — Send text to Groq and receive a clear, concise summary instantly.
 
 
 ## Tech Stack
