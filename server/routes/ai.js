@@ -27,10 +27,7 @@ router.post('/summarize', async (req, res) => {
   try {
     const { text } = req.body;
 
-    // ─────────────────────────────────────────────────────────────────────
     // Validate input
-    // ─────────────────────────────────────────────────────────────────────
-
     if (typeof text !== 'string' || !text.trim()) {
       return res.status(400).json({
         error: 'Text is required.',
@@ -39,9 +36,7 @@ router.post('/summarize', async (req, res) => {
 
     const cleanedText = text.trim();
 
-    // ─────────────────────────────────────────────────────────────────────
     // Calculate an appropriate summary length
-    // ─────────────────────────────────────────────────────────────────────
 
     const wordCount = cleanedText.split(/\s+/).length;
 
@@ -62,10 +57,7 @@ router.post('/summarize', async (req, res) => {
     const model =
       process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-    // ─────────────────────────────────────────────────────────────────────
     // Generate summary
-    // ─────────────────────────────────────────────────────────────────────
-
     const response = await aiInstance.chat.completions.create({
       model,
 
@@ -75,23 +67,14 @@ router.post('/summarize', async (req, res) => {
         {
           role: 'system',
           content: `
-You are a professional text summarization engine.
+Summarize the input in no more than ${maxWords} words.
 
-Your task is to compress the provided text while preserving its core meaning.
-
-STRICT RULES:
-
-1. Identify the central idea of the text first.
-2. Keep only the most important supporting facts or conclusions.
-3. Remove examples, repetition, background details, and minor information.
-4. Do not introduce facts, opinions, or information that are not present in the original.
-5. Rewrite the information concisely instead of copying large portions of the text.
-6. Produce a short, coherent summary of 2-4 sentences.
-7. Prefer information-dense sentences.
-8. Return ONLY the final summary.
-
-The goal is maximum information retention with minimum words.
-          `.trim(),
+Preserve the central idea and essential facts/conclusions.
+Remove examples, repetition, background, and minor details.
+Do not add facts, opinions, or assumptions.
+Rewrite concisely and maximize information density.
+Return only the summary. Never exceed ${maxWords} words.
+`.trim(),
         },
         {
           role: 'user',
@@ -103,10 +86,7 @@ The goal is maximum information retention with minimum words.
     const summary =
       response.choices?.[0]?.message?.content?.trim();
 
-    // ─────────────────────────────────────────────────────────────────────
     // Validate AI response
-    // ─────────────────────────────────────────────────────────────────────
-
     if (!summary) {
       console.error('Groq returned an empty response.');
 
