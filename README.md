@@ -1,6 +1,6 @@
 # AI Summarizer
 
-A basic, foundational AI-powered text summarization web app built with **React + Vite** (frontend) and **Express + Google Gemini** (backend).
+A basic, foundational AI-powered text summarization web app built with **React + Vite** (frontend) and **Express + Groq** (backend).
 
 ## Features
 - ⚡ **Basic Summarization** — Send text to Gemini and receive a clear, concise summary instantly.
@@ -11,7 +11,7 @@ A basic, foundational AI-powered text summarization web app built with **React +
 |----------|-------------------------------|
 | Frontend | React 18, Vite, CSS           |
 | Backend  | Node.js, Express              |
-| AI       | Google Gemini 2.0 Flash       |
+| AI       | groq API KEY                  |
 | HTTP     | Axios                         |
 
 ## Project Structure
@@ -37,7 +37,6 @@ ai-summarizer/
 ```bash
 cd server
 npm install
-cp .env.example .env
 npm start
 # Server runs on http://localhost:5001
 ```
