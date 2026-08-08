@@ -20,7 +20,7 @@ ai-summarizer/
 ├── server/                 ← Express API
 │   ├── server.js           ← Entry point & middleware
 │   ├── routes/ai.js        ← POST /api/summarize
-│   └── .env                ← GOOGLE_API_KEY, PORT
+│   └── .env                ← GROQ, PORT
 │
 └── client/                 ← React + Vite frontend
     ├── vite.config.js      ← Proxies /api → backend
