@@ -67,13 +67,10 @@ router.post('/summarize', async (req, res) => {
         {
           role: 'system',
           content: `
-Summarize the input in no more than ${maxWords} words.
-
-Preserve the central idea and essential facts/conclusions.
-Remove examples, repetition, background, and minor details.
-Do not add facts, opinions, or assumptions.
-Rewrite concisely and maximize information density.
-Return only the summary. Never exceed ${maxWords} words.
+You are an expert summarizer. Create a concise summary of the following text in ${maxWords} words or less.
+Focus on the main ideas and key points. Omit examples, anecdotes, and redundant information.
+Do not include any information not present in the original text.
+Output only the summary text, nothing else.
 `.trim(),
         },
         {
