@@ -27,10 +27,17 @@ router.post('/transform', async (req, res) => {
   try {
     const { action, text } = req.body;
 
-    // Validate input
+    // Validate input presence and type
     if (typeof text !== 'string' || !text.trim()) {
       return res.status(400).json({
         error: 'Text is required for transformation.',
+      });
+    }
+
+    // Limit maximum text length (e.g., 50,000 characters)
+    if (text.length > 50000) {
+      return res.status(400).json({
+        error: 'Payload is too large. Selected text must be under 50,000 characters.',
       });
     }
 
@@ -114,11 +121,16 @@ router.post('/chat', async (req, res) => {
       });
     }
 
-    // Validate each message format
+    // Validate each message format & enforce constraints
     for (const msg of messages) {
       if (!msg || typeof msg.role !== 'string' || typeof msg.content !== 'string') {
         return res.status(400).json({
           error: 'Invalid message structure. Each message needs a role and content.',
+        });
+      }
+      if (msg.content.length > 10000) {
+        return res.status(400).json({
+          error: 'Message content exceeds the 10,000 character limit.',
         });
       }
     }

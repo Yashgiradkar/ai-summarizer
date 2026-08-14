@@ -43,9 +43,11 @@ export default function App() {
   }, [chatMessages]);
 
   const handleTransform = async (action) => {
-    // If text has been selected, transform only the selection; otherwise full document.
+    // Capture and lock selection details immediately before async network lag
     const isSelectionActive = selectedText.trim().length > 0;
     const targetText = isSelectionActive ? selectedText : text;
+    const start = isSelectionActive ? selectionStart : 0;
+    const end = isSelectionActive ? selectionEnd : text.length;
 
     if (!targetText.trim()) {
       setError(`Please select or write some text to ${action.replace('_', ' ')}.`);
@@ -60,11 +62,15 @@ export default function App() {
       const result = await transformText(action, targetText);
       setSuggestion(result);
       setOriginalSelectedText(targetText);
-      setPreviewSelectionStart(isSelectionActive ? selectionStart : 0);
-      setPreviewSelectionEnd(isSelectionActive ? selectionEnd : text.length);
+      setPreviewSelectionStart(start);
+      setPreviewSelectionEnd(end);
       setTransformAction(action);
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Transformation failed. Please try again.');
+      if (err.message && err.message.toLowerCase().includes('network error')) {
+        setError('Network Error: Failed to contact the backend server. Please verify it is running on port 5001.');
+      } else {
+        setError(err.response?.data?.error || err.message || 'Transformation failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -114,7 +120,11 @@ export default function App() {
       const responseText = await sendChatMessage(updatedMessages);
       setChatMessages([...updatedMessages, { role: 'assistant', content: responseText }]);
     } catch (err) {
-      setChatError(err.response?.data?.error || err.message || 'Failed to send message. Please try again.');
+      if (err.message && err.message.toLowerCase().includes('network error')) {
+        setChatError('Network Error: Connection to AI Assistant failed. Please start the backend.');
+      } else {
+        setChatError(err.response?.data?.error || err.message || 'Failed to send message. Please try again.');
+      }
     } finally {
       setChatLoading(false);
     }
