@@ -726,9 +726,281 @@ textarea:focus {
   50% { opacity: 0; }
 }
 
+/* ── Chat Card Header (multi-row) ────────────────────────────────────────── */
 .chat-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
+.chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.chat-header-left h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-bright);
+  white-space: nowrap;
+}
+
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* "🗂 N chats ▼" toggle button */
+.btn-conv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+.btn-conv-toggle:hover {
+  background: rgba(102, 252, 241, 0.06);
+  border-color: rgba(102, 252, 241, 0.3);
+  color: var(--text-bright);
+}
+
+.conv-chevron {
+  font-size: 0.6rem;
+  opacity: 0.6;
+}
+
+/* "+ New Chat" button */
+.btn-new-chat {
+  background: var(--accent);
+  color: var(--bg-base);
+  border: none;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.btn-new-chat:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+/* ── Conversation History Dropdown Panel ─────────────────────────────────── */
+.conv-history-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 0.75rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  animation: fadeIn 0.2s ease forwards;
+}
+
+.conv-history-panel::-webkit-scrollbar {
+  width: 5px;
+}
+.conv-history-panel::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 3px;
+}
+
+.conv-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  gap: 0.5rem;
+}
+
+.conv-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.conv-item.active {
+  background: rgba(102, 252, 241, 0.07);
+  border-color: rgba(102, 252, 241, 0.2);
+}
+
+.conv-item-body {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+.conv-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.conv-item-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+}
+
+.conv-title {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-count {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  margin-top: 0.1rem;
+}
+
+/* ── Active Conversation Label ────────────────────────────────────────────── */
+.active-conv-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  padding: 0 0.25rem;
+}
+
+.conv-active-indicator {
+  color: var(--accent);
+  font-size: 0.55rem;
+  line-height: 1;
+}
+
+.conv-active-title {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+/* ── Editor Meta Header ───────────────────────────────────────────────────── */
+.editor-meta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.editor-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.document-counters {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dot-divider {
+  opacity: 0.4;
+}
+
+/* ── Editor Control Panel ────────────────────────────────────────────────── */
+.editor-control-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.tone-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tone-label {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.tone-dropdown {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  color: var(--text-bright);
+  font-family: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  outline: none;
+  transition: var(--transition);
+}
+
+.tone-dropdown:focus {
+  border-color: var(--border-focus);
+}
+
+.btn-undo {
+  font-size: 0.8rem;
+  padding: 0.45rem 0.9rem;
+}
+
+/* ── Badge ───────────────────────────────────────────────────────────────── */
+.badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 50px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-accent {
+  background: rgba(102, 252, 241, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(102, 252, 241, 0.25);
+}
+
+/* ── Sidebar section stacking ────────────────────────────────────────────── */
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+}
