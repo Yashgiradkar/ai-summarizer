@@ -1,6 +1,6 @@
 # AI-Assisted Writing Workspace
 
-A browser-based, AI-powered writing studio where writers can draft content, highlight sections for targeted AI operations (Summarize, Expand, Shorten, Fix Grammar), preview transformations, chat with an AI writing assistant, and manage multiple drafts. 
+A browser-based, AI-powered writing studio where writers can draft content, highlight sections for targeted AI operations (Summarize, Expand, Shorten, Fix Grammar), preview transformations, chat with an AI writing assistant, and manage multiple drafts.
 
 This project integrates real-time Server-Sent Events (SSE) token streaming, robust client-side cancellation, local database persistence, and an analytics dashboard.
 
@@ -8,26 +8,31 @@ This project integrates real-time Server-Sent Events (SSE) token streaming, robu
 
 ## 🚀 Features
 
-### 📝 Core Editor & AI Text Actions
+### 📝 Writing Experience & Document Management
 * **Multi-Document Sidebar**: Create, switch, rename, and delete drafts. All drafts auto-save to `localStorage`.
-* **Selection-Targeted Operations**: Highlight any sentence or paragraph to apply localized modifications:
+* **Editor Counters**: Live word and character counters tracking overall document size.
+* **Keyboard Shortcuts**: Global key handlers mapping `Cmd/Ctrl + Enter` (quick grammar correction), `Cmd/Ctrl + Z` (undo AI edit), and `Cmd/Ctrl + S` (manual save indicator).
+
+### 🛠️ AI Writing Tools (Transformations)
+* **Targeted Selection Operations**: Highlight any sentence or paragraph to apply localized modifications:
   * **Summarize**: Condense text while preserving key information.
   * **Expand**: Add descriptive detail and context without introducing speculative facts.
   * **Shorten**: Trim unnecessary wordiness.
-  * **Fix Grammar**: Polish grammar, spelling, and phrasing while keeping your tone.
+  * **Fix Grammar**: Polish grammar, spelling, and phrasing.
 * **Tone Selector**: Apply specific tones (Default, Professional, Casual, Creative) to your transforms.
 * **Side-by-Side Preview**: Inspect original text and suggested AI output side-by-side.
 * **Safe Replacement**: Overwrite target text only if it has not changed since the request was sent.
 * **Undo Operations**: Press `Cmd/Ctrl + Z` or click **Undo Edit** to revert the last applied suggestion.
+* **Regeneration**: Trigger `🔄 Regenerate` to re-run the transformation with the same parameters.
 
-### 💬 Chat Assistant
-* **Context-Aware Sidebar**: Conversational assistant maintaining session history.
+### 💬 AI Chat Assistant
+* **Context-Aware Sidebar**: Conversational assistant maintaining session history per document.
 * **Smart Insertion**: One-click **Insert into Editor** to insert the response at your last cursor position or selection.
-* **Response Regeneration**: Trigger `🔄 Regenerate` to re-run the last chat message or text transformation.
+* **Response Regeneration**: Re-request the latest assistant answer dynamically.
 
 ### ⚡ Performance & Security
 * **Server-Sent Events (SSE)**: Text streams word-by-word with zero delay.
-* **AbortController**: Instantly cancels pending requests if you write/click again, preventing race conditions.
+* **AbortController**: Instantly cancels pending streams if you write/click again, preventing race conditions.
 * **Express Rate Limiter**: Throttles route calls to 30 requests/minute per IP to prevent API key abuse.
 * **Secure Key Handling**: Keep API keys locked on the backend.
 
@@ -95,16 +100,6 @@ npm run dev
 
 ---
 
-## ⌨️ Keyboard Shortcuts
-
-| Shortcut | Action |
-|---|---|
-| `Cmd/Ctrl + Enter` | Instantly runs Grammar Correction on selection |
-| `Cmd/Ctrl + Z` | Reverts last applied suggestion / chat insert |
-| `Cmd/Ctrl + S` | Triggers a visual draft-saved notification |
-
----
-
 ## 💡 Design Decisions & Trade-offs
 
 ### 1. Controlled `<textarea>` vs. Rich Text Editor
@@ -122,8 +117,8 @@ npm run dev
 ---
 
 ## ⚠️ Known Limitations
-* **Plain Text Only**: No support for markdown preview renders, bold, or underline styles inside the writing board.
-* **Browser-Lock**: Clearing browser cache or switching devices will reset saved documents and logs.
+* **Plain Text Only**: No support for HTML formatting inside the writing board.
+* **Browser-Lock**: Clearing browser cache or switching devices will reset saved documents.
 * **Single Undo Step**: The undo stack supports reverting the last change, but does not support deep branches.
 
 ---
