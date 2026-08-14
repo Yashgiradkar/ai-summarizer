@@ -4,3 +4,8 @@ export const summarizeText = async (text) => {
   const { data } = await axios.post('/api/summarize', { text });
   return data.summary;
 };
+
+export const transformText = async (action, text) => {
+  const { data } = await axios.post('/api/transform', { action, text });
+  return data.suggestion;
+};
