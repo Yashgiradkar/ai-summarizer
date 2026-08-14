@@ -25,7 +25,7 @@ const getAI = () => {
 
 router.post('/transform', async (req, res) => {
   try {
-    const { action, text } = req.body;
+    const { action, text, tone = 'default' } = req.body;
 
     // Validate input presence and type
     if (typeof text !== 'string' || !text.trim()) {
@@ -48,6 +48,13 @@ router.post('/transform', async (req, res) => {
       });
     }
 
+    const validTones = ['default', 'professional', 'casual', 'creative'];
+    if (tone && !validTones.includes(tone)) {
+      return res.status(400).json({
+        error: `Invalid tone. Must be one of: ${validTones.join(', ')}`,
+      });
+    }
+
     const cleanedText = text.trim();
 
     // Prompts matching requirements
@@ -58,7 +65,13 @@ router.post('/transform', async (req, res) => {
       fix_grammar: `You are an expert editor. Correct any grammar, spelling, punctuation, awkward phrasing, and readability issues in the selected text. Do not unnecessarily rewrite the author's message or change their tone. Output only the corrected text, nothing else.`
     };
 
-    const systemPrompt = prompts[action];
+    let systemPrompt = prompts[action];
+    
+    // Inject tone instruction if specified
+    if (tone && tone !== 'default') {
+      systemPrompt += ` Rewrite the output using a ${tone} tone.`;
+    }
+
     const aiInstance = getAI();
     const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
@@ -175,70 +188,6 @@ router.post('/chat', async (req, res) => {
 
     return res.status(500).json({
       error: 'Chat assistant error. Please try again.',
-    });
-  }
-});
-
-router.post('/summarize', async (req, res) => {
-  try {
-    const { text } = req.body;
-
-    // Validate input
-    if (typeof text !== 'string' || !text.trim()) {
-      return res.status(400).json({
-        error: 'Text is required.',
-      });
-    }
-
-    const cleanedText = text.trim();
-    const wordCount = cleanedText.split(/\s+/).length;
-    let maxWords;
-
-    if (wordCount <= 100) {
-      maxWords = 35;
-    } else if (wordCount <= 300) {
-      maxWords = 60;
-    } else if (wordCount <= 700) {
-      maxWords = 90;
-    } else {
-      maxWords = 120;
-    }
-
-    const aiInstance = getAI();
-    const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
-
-    // Generate summary
-    const response = await aiInstance.chat.completions.create({
-      model,
-      temperature: 0.2,
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert summarizer. Create a concise summary of the following text in ${maxWords} words or less. Focus on the main ideas and key points. Omit examples, anecdotes, and redundant information. Do not include any information not present in the original text. Output only the summary text, nothing else.`.trim(),
-        },
-        {
-          role: 'user',
-          content: cleanedText,
-        },
-      ],
-    });
-
-    const summary = response.choices?.[0]?.message?.content?.trim();
-
-    if (!summary) {
-      console.error('Groq returned an empty response.');
-      return res.status(502).json({
-        error: 'The AI returned an empty response. Please try again.',
-      });
-    }
-
-    return res.status(200).json({
-      summary,
-    });
-  } catch (err) {
-    console.error('[/api/summarize error]', err);
-    return res.status(500).json({
-      error: 'Failed to generate summary. Please try again.',
     });
   }
 });

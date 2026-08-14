@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import aiRoutes from './routes/ai.js';
 
+import { aiLimiter } from './middleware/rateLimiter.js';
+
 const app = express();
 const PORT = process.env.PORT || 5001;
 
@@ -30,7 +32,7 @@ app.use(express.json({ limit: '2mb' }));
 
 
 // API routes
-app.use('/api', aiRoutes);
+app.use('/api', aiLimiter, aiRoutes);
 
 // 404 handler
 app.use((_req, res) => {

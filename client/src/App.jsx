@@ -1,40 +1,66 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { transformText, sendChatMessage } from './api';
 import { replaceTextSafe } from './utils/replaceText';
 
 export default function App() {
-  const [text, setText] = useState('');
+  // ── 1. Document Draft State (Auto-save) ────────────────────────────────────
+  const [text, setText] = useState(() => {
+    return localStorage.getItem('ai_writing_workspace_draft') || '';
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Selection tracking state
+  // ── 2. Selection Coordinates & Stale Closure Ref ───────────────────────────
+  // We keep a state for reactive selection UI highlighting
   const [selectionStart, setSelectionStart] = useState(0);
   const [selectionEnd, setSelectionEnd] = useState(0);
   const [selectedText, setSelectedText] = useState('');
+  
+  // Track last selection on focus loss to restore cursor position accurately
+  const lastSelectionRef = useRef({ start: 0, end: 0 });
 
-  // Suggestion preview state
+  // ── 3. Undo Stack ──────────────────────────────────────────────────────────
+  const [undoStack, setUndoStack] = useState([]);
+
+  // ── 4. Tone Selector ───────────────────────────────────────────────────────
+  const [tone, setTone] = useState('default');
+
+  // ── 5. Suggestion Preview State ────────────────────────────────────────────
   const [suggestion, setSuggestion] = useState('');
   const [originalSelectedText, setOriginalSelectedText] = useState('');
   const [previewSelectionStart, setPreviewSelectionStart] = useState(0);
   const [previewSelectionEnd, setPreviewSelectionEnd] = useState(0);
   const [transformAction, setTransformAction] = useState('');
 
-  // Chat state
+  // ── 6. Chat Assistant State ────────────────────────────────────────────────
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
 
+  // ── 7. DOM Refs & Request Aborters ─────────────────────────────────────────
   const textareaRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const transformAbortRef = useRef(null);
+  const chatAbortRef = useRef(null);
+
+  // Auto-save draft on modification
+  useEffect(() => {
+    localStorage.setItem('ai_writing_workspace_draft', text);
+  }, [text]);
 
   // Sync cursor selection offsets & selected text content
   const handleTextSelect = () => {
     if (!textareaRef.current) return;
     const { selectionStart, selectionEnd, value } = textareaRef.current;
+    
+    // Save to React state for UI triggers
     setSelectionStart(selectionStart);
     setSelectionEnd(selectionEnd);
     setSelectedText(value.substring(selectionStart, selectionEnd));
+    
+    // Lock in Ref to avoid stale focus loss when clicking panel items
+    lastSelectionRef.current = { start: selectionStart, end: selectionEnd };
   };
 
   // Scroll chat messages thread to bottom on update
@@ -42,30 +68,56 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
+  // Clean up aborted requests on component unmount
+  useEffect(() => {
+    return () => {
+      transformAbortRef.current?.abort();
+      chatAbortRef.current?.abort();
+    };
+  }, []);
+
+  // ── AI Transform Handler ───────────────────────────────────────────────────
   const handleTransform = async (action) => {
-    // Capture and lock selection details immediately before async network lag
-    const isSelectionActive = selectedText.trim().length > 0;
-    const targetText = isSelectionActive ? selectedText : text;
-    const start = isSelectionActive ? selectionStart : 0;
-    const end = isSelectionActive ? selectionEnd : text.length;
+    if (!textareaRef.current) return;
+
+    // Resolve selection directly from the DOM to avoid async React state batching delays
+    const el = textareaRef.current;
+    const currentStart = el.selectionStart;
+    const currentEnd = el.selectionEnd;
+    const currentVal = el.value;
+    
+    const highlighted = currentVal.substring(currentStart, currentEnd);
+    const isSelectionActive = highlighted.trim().length > 0;
+    
+    const targetText = isSelectionActive ? highlighted : currentVal;
+    const start = isSelectionActive ? currentStart : 0;
+    const end = isSelectionActive ? currentEnd : currentVal.length;
 
     if (!targetText.trim()) {
       setError(`Please select or write some text to ${action.replace('_', ' ')}.`);
       return;
     }
 
+    // Abort any existing in-flight transform request
+    transformAbortRef.current?.abort();
+    transformAbortRef.current = new AbortController();
+
     setLoading(true);
     setError('');
     setSuggestion('');
 
     try {
-      const result = await transformText(action, targetText);
+      const result = await transformText(action, targetText, tone, transformAbortRef.current.signal);
       setSuggestion(result);
       setOriginalSelectedText(targetText);
       setPreviewSelectionStart(start);
       setPreviewSelectionEnd(end);
       setTransformAction(action);
     } catch (err) {
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+        // Silent catch for user aborts
+        return;
+      }
       if (err.message && err.message.toLowerCase().includes('network error')) {
         setError('Network Error: Failed to contact the backend server. Please verify it is running on port 5001.');
       } else {
@@ -76,7 +128,11 @@ export default function App() {
     }
   };
 
+  // ── Safe Override Handler ──────────────────────────────────────────────────
   const handleReplace = () => {
+    // Record current text in undo stack before making modifications
+    setUndoStack((prev) => [...prev, text]);
+
     const result = replaceTextSafe(
       text,
       suggestion,
@@ -103,7 +159,15 @@ export default function App() {
     setTransformAction('');
   };
 
-  // Handle submitting user message to chat assistant
+  // ── Undo Action ────────────────────────────────────────────────────────────
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const previousText = undoStack[undoStack.length - 1];
+    setText(previousText);
+    setUndoStack((prev) => prev.slice(0, -1));
+  };
+
+  // ── AI Chat Assistant Submit ───────────────────────────────────────────────
   const handleSendChatMessage = async (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -116,10 +180,17 @@ export default function App() {
     setChatLoading(true);
     setChatError('');
 
+    // Cancel any previous pending chat query
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = new AbortController();
+
     try {
-      const responseText = await sendChatMessage(updatedMessages);
+      const responseText = await sendChatMessage(updatedMessages, chatAbortRef.current.signal);
       setChatMessages([...updatedMessages, { role: 'assistant', content: responseText }]);
     } catch (err) {
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+        return;
+      }
       if (err.message && err.message.toLowerCase().includes('network error')) {
         setChatError('Network Error: Connection to AI Assistant failed. Please start the backend.');
       } else {
@@ -130,40 +201,50 @@ export default function App() {
     }
   };
 
-  // Insert AI assistant reply at the current editor cursor position or append it
+  // ── Smart Insertion Handler ────────────────────────────────────────────────
   const handleInsertResponse = (responseText) => {
+    // Record current text in undo stack
+    setUndoStack((prev) => [...prev, text]);
+
     let newText = '';
+    const start = lastSelectionRef.current.start;
+    const end = lastSelectionRef.current.end;
     let newCursorPos = 0;
 
     if (text.length === 0) {
       newText = responseText;
       newCursorPos = responseText.length;
     } else {
-      const isCursorAtStart = selectionStart === 0 && selectionEnd === 0;
+      const isCursorAtStart = start === 0 && end === 0;
       if (isCursorAtStart) {
-        // Default behavior: append text to the end of editor
+        // Appending to end is the default fallback
         newText = text + '\n\n' + responseText;
         newCursorPos = newText.length;
       } else {
-        // Insert / replace at user selection bounds
-        newText = text.slice(0, selectionStart) + responseText + text.slice(selectionEnd);
-        newCursorPos = selectionStart + responseText.length;
+        // Insert precisely at user's selection / cursor
+        newText = text.slice(0, start) + responseText + text.slice(end);
+        newCursorPos = start + responseText.length;
       }
     }
 
     setText(newText);
-    setSelectionStart(newCursorPos);
-    setSelectionEnd(newCursorPos);
+    
+    // Save new cursor coords to prevent stale coordinates
+    lastSelectionRef.current = { start: newCursorPos, end: newCursorPos };
 
-    // Refocus the textarea and update selection points
+    // Refocus the textarea and position cursor
     textareaRef.current?.focus();
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.selectionStart = newCursorPos;
         textareaRef.current.selectionEnd = newCursorPos;
       }
-    }, 10);
+    }, 15);
   };
+
+  // Document calculations
+  const totalWords = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const totalChars = text.length;
 
   return (
     <div className="app-container">
@@ -177,6 +258,16 @@ export default function App() {
           {/* Left Column: Writing Area */}
           <div className="editor-section">
             <div className="card">
+              {/* Document metadata counters */}
+              <div className="editor-meta-header">
+                <span className="editor-label">Writing Board</span>
+                <div className="document-counters">
+                  <span>{totalWords.toLocaleString()} words</span>
+                  <span className="dot-divider">·</span>
+                  <span>{totalChars.toLocaleString()} characters</span>
+                </div>
+              </div>
+
               <textarea
                 ref={textareaRef}
                 value={text}
@@ -196,7 +287,36 @@ export default function App() {
                 {selectedText.trim() ? (
                   <span>✨ <strong>Transforming selection</strong> ({selectedText.length} chars)</span>
                 ) : (
-                  <span>💡 Select a portion of the text to transform just that section, or do not select to transform the entire document.</span>
+                  <span>💡 Highlight any paragraph, sentence, or phrase to target it with AI actions.</span>
+                )}
+              </div>
+
+              {/* Controls bar: Tones + Undo */}
+              <div className="editor-control-panel">
+                <div className="tone-wrapper">
+                  <label htmlFor="tone-select" className="tone-label">Tone:</label>
+                  <select
+                    id="tone-select"
+                    value={tone}
+                    onChange={(e) => setTone(e.target.value)}
+                    disabled={loading}
+                    className="tone-dropdown"
+                  >
+                    <option value="default">Default Tone</option>
+                    <option value="professional">💼 Professional</option>
+                    <option value="casual">💬 Casual</option>
+                    <option value="creative">🎨 Creative</option>
+                  </select>
+                </div>
+
+                {undoStack.length > 0 && (
+                  <button
+                    onClick={handleUndo}
+                    className="btn btn-secondary btn-undo"
+                    title="Undo last text override"
+                  >
+                    ↩️ Undo Edit ({undoStack.length})
+                  </button>
                 )}
               </div>
 
