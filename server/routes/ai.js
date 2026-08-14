@@ -103,6 +103,70 @@ router.post('/transform', async (req, res) => {
   }
 });
 
+router.post('/chat', async (req, res) => {
+  try {
+    const { messages } = req.body;
+
+    // Validate input
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({
+        error: 'Messages history array is required.',
+      });
+    }
+
+    // Validate each message format
+    for (const msg of messages) {
+      if (!msg || typeof msg.role !== 'string' || typeof msg.content !== 'string') {
+        return res.status(400).json({
+          error: 'Invalid message structure. Each message needs a role and content.',
+        });
+      }
+    }
+
+    const aiInstance = getAI();
+    const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+
+    const systemMessage = {
+      role: 'system',
+      content: 'You are a helpful and concise AI writing assistant. Help the user edit, write, brainstorm, or refine text. Keep your responses clear, helpful, and direct. Avoid unnecessary conversational fluff unless specifically requested.',
+    };
+
+    // Prepend system prompt to conversation context
+    const fullMessages = [systemMessage, ...messages];
+
+    const response = await aiInstance.chat.completions.create({
+      model,
+      temperature: 0.7,
+      messages: fullMessages,
+    });
+
+    const reply = response.choices?.[0]?.message?.content?.trim();
+
+    if (!reply) {
+      console.error('Groq returned an empty response for chat.');
+      return res.status(502).json({
+        error: 'The AI assistant failed to respond. Please try again.',
+      });
+    }
+
+    return res.status(200).json({
+      response: reply,
+    });
+  } catch (err) {
+    console.error('[/api/chat error]', err);
+
+    if (err?.status === 429 || err?.code === 429) {
+      return res.status(429).json({
+        error: 'Groq API rate limit or quota exceeded. Please try again later.',
+      });
+    }
+
+    return res.status(500).json({
+      error: 'Chat assistant error. Please try again.',
+    });
+  }
+});
+
 router.post('/summarize', async (req, res) => {
   try {
     const { text } = req.body;
